@@ -1,0 +1,29 @@
+{
+  "window": {
+    "x": 175,
+    "y": 820,
+    "width": 120,
+    "height": 120,
+    "scale": 1.0,
+    "opacity": 1.0,
+    "always_on_top": true,
+    "click_through": false,
+    "edge_snap": true,
+    "snap_distance": 20
+  },
+  "pet": {
+    "current_skin": "cat",
+    "energy": 100.0,
+    "mood": 80.0,
+    "hunger": 20.0,
+    "emotion": "happy",
+    "auto_sleep": true,
+    "idle_timeout": 180
+  },
+  "system": {
+    "auto_start": false,
+    "show_weather": true,
+    "reminders": [],
+    "language": "zh_CN"
+  }
+}
