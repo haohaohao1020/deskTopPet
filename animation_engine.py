@@ -1,6 +1,7 @@
 import random
 import math
-from PySide6.QtCore import QObject, QTimer, Signal, Slot, QPoint, QRect, Qt, QGuiApplication
+from PySide6.QtCore import QObject, QTimer, Signal, Slot, QPoint, QRect, Qt
+from PySide6.QtGui import QGuiApplication
 
 class AnimationEngine(QObject):
     action_changed = Signal(str)

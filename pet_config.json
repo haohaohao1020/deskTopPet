@@ -1,7 +1,7 @@
 {
   "window": {
-    "x": 175,
-    "y": 820,
+    "x": 1337,
+    "y": 749,
     "width": 120,
     "height": 120,
     "scale": 1.0,
@@ -12,11 +12,11 @@
     "snap_distance": 20
   },
   "pet": {
-    "current_skin": "cat",
-    "energy": 100.0,
-    "mood": 80.0,
-    "hunger": 20.0,
-    "emotion": "happy",
+    "current_skin": "dog",
+    "energy": 22.100000000000044,
+    "mood": 100,
+    "hunger": 9.280000000000006,
+    "emotion": "neutral",
     "auto_sleep": true,
     "idle_timeout": 180
   },
