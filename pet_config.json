@@ -1,22 +1,22 @@
 {
   "window": {
-    "x": 1337,
-    "y": 749,
-    "width": 120,
-    "height": 120,
-    "scale": 1.0,
-    "opacity": 1.0,
+    "x": 0,
+    "y": 744,
+    "width": 144,
+    "height": 144,
+    "scale": 1.2,
+    "opacity": 0.4,
     "always_on_top": true,
-    "click_through": false,
+    "click_through": true,
     "edge_snap": true,
     "snap_distance": 20
   },
   "pet": {
-    "current_skin": "dog",
-    "energy": 22.100000000000044,
-    "mood": 100,
-    "hunger": 9.280000000000006,
-    "emotion": "neutral",
+    "current_skin": "bear",
+    "energy": 100,
+    "mood": 39.19999999999878,
+    "hunger": 83.27999999999892,
+    "emotion": "bored",
     "auto_sleep": true,
     "idle_timeout": 180
   },
@@ -25,5 +25,18 @@
     "show_weather": true,
     "reminders": [],
     "language": "zh_CN"
+  },
+  "bongocat": {
+    "enabled": false,
+    "raise_duration": 0.06,
+    "press_duration": 0.04,
+    "release_duration": 0.06,
+    "min_press_gap": 0.02,
+    "rapid_threshold": 0.08,
+    "mouse_click_duration": 0.12,
+    "mouse_scroll_duration": 0.15,
+    "paw_lift_height": 18.0,
+    "paw_press_depth": 8.0,
+    "idle_timeout": 1.5
   }
 }

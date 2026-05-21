@@ -24,6 +24,9 @@ from emotion_ai import EmotionAI
 from animation_engine import AnimationEngine
 from ui_components import SpeechBubble, ReminderDialog, SettingsDialog
 from workers import WeatherWorker, ReminderWorker
+from bongocat_renderer import BongocatRenderer
+from action_state_machine import ActionStateMachine
+from key_listener import ListenerThread
 
 
 class PetWindow(QWidget):
@@ -46,6 +49,13 @@ class PetWindow(QWidget):
         
         self._screen = app.primaryScreen().geometry()
         self._animation_engine = AnimationEngine(self._config, self._screen)
+        
+        self._bongocat_enabled = self._config.get("bongocat", "enabled") or False
+        self._bongocat_renderer = BongocatRenderer()
+        self._action_state_machine = ActionStateMachine()
+        self._listener_thread = None
+        
+        self._setup_bongocat_connections()
         
         self._setup_window()
         self._skin = get_skin(self._config.get("pet", "current_skin") or "cat")
@@ -70,14 +80,18 @@ class PetWindow(QWidget):
         self.setFocusPolicy(Qt.NoFocus)
         
         scale = self._config.get("window", "scale") or 1.0
-        width = int(120 * scale)
-        height = int(120 * scale)
+        if self._bongocat_enabled:
+            base_w, base_h = 260, 220
+        else:
+            base_w, base_h = 120, 120
+        width = int(base_w * scale)
+        height = int(base_h * scale)
         self._config.set("window", "width", width)
         self._config.set("window", "height", height)
         self.setFixedSize(width, height)
         self.setWindowOpacity(self._config.get("window", "opacity") or 1.0)
         
-        if self._config.get("window", "click_through"):
+        if self._config.get("window", "click_through") or self._bongocat_enabled:
             self._enable_click_through(True)
     
     def _setup_tray(self):
@@ -109,6 +123,82 @@ class PetWindow(QWidget):
         self._animation_engine.action_changed.connect(self._on_action_changed)
         self._animation_engine.position_changed.connect(self._on_position_changed)
         self._animation_engine.frame_updated.connect(self._on_frame_updated)
+
+    def _setup_bongocat_connections(self):
+        am = self._action_state_machine
+        am.left_paw_changed.connect(self._bongocat_renderer.update_left_paw)
+        am.right_paw_changed.connect(self._bongocat_renderer.update_right_paw)
+        am.mouse_state_changed.connect(self._bongocat_renderer.update_mouse)
+        am.idle_state_changed.connect(self._bongocat_renderer.set_idle)
+        
+        self._bongocat_renderer.set_emotion(self._emotion)
+
+        if self._bongocat_enabled:
+            self._sync_bongocat_config()
+            QTimer.singleShot(800, self._start_bongocat_listener)
+
+    def _start_bongocat_listener(self):
+        if self._listener_thread:
+            return
+        try:
+            self._listener_thread = ListenerThread(self)
+            listener = self._listener_thread.listener
+            listener.key_pressed.connect(self._action_state_machine.on_key_press)
+            listener.key_released.connect(self._action_state_machine.on_key_release)
+            listener.mouse_clicked.connect(self._action_state_machine.on_mouse_click)
+            listener.mouse_scrolled.connect(self._action_state_machine.on_mouse_scroll)
+            self._listener_thread.start()
+            print("[INFO] Bongocat keyboard/mouse listener started")
+        except Exception as e:
+            print(f"[ERROR] Failed to start Bongocat listener: {e}")
+            self._listener_thread = None
+
+    def _stop_bongocat_listener(self):
+        if self._listener_thread:
+            try:
+                self._listener_thread.stop_listener()
+                self._listener_thread = None
+                print("[INFO] Bongocat listener stopped")
+            except Exception as e:
+                print(f"[ERROR] Failed to stop Bongocat listener: {e}")
+
+    def _toggle_bongocat(self, enabled: bool):
+        self._bongocat_enabled = enabled
+        self._config.set("bongocat", "enabled", enabled)
+        
+        if enabled:
+            self._sync_bongocat_config()
+            self._start_bongocat_listener()
+        else:
+            self._stop_bongocat_listener()
+        
+        self._adjust_window_for_bongocat(enabled)
+        self.update()
+
+    def _sync_bongocat_config(self):
+        bongo_cfg = self._config.get("bongocat")
+        if bongo_cfg:
+            params = {k: v for k, v in bongo_cfg.items() if k != "enabled"}
+            self._action_state_machine.update_config(params)
+
+    def _adjust_window_for_bongocat(self, enabled: bool):
+        scale = self._config.get("window", "scale") or 1.0
+        if enabled:
+            base_w, base_h = 260, 220
+        else:
+            base_w, base_h = 120, 120
+        
+        width = int(base_w * scale)
+        height = int(base_h * scale)
+        self._config.set("window", "width", width)
+        self._config.set("window", "height", height)
+        self.setFixedSize(width, height)
+        
+        if enabled:
+            self._enable_click_through(True)
+            self._config.set("window", "click_through", True)
+        else:
+            self._enable_click_through(self._config.get("window", "click_through"))
     
     def _load_position(self):
         x = self._config.get("window", "x") or 500
@@ -127,7 +217,7 @@ class PetWindow(QWidget):
         try:
             self._weather_worker = WeatherWorker(self._config)
             self._weather_worker.weather_ready.connect(self._on_weather_ready)
-            self._weather_worker.error_occurred.connect(self._on_worker_error)
+            self._weather_worker.weather_error.connect(self._on_worker_error)
             
             self._weather_thread = QThread(self)
             self._weather_worker.moveToThread(self._weather_thread)
@@ -152,6 +242,7 @@ class PetWindow(QWidget):
     def _on_emotion_changed(self, emotion: str):
         self._emotion = emotion
         self._animation_engine.set_emotion_context(emotion)
+        self._bongocat_renderer.set_emotion(emotion)
         self.update()
     
     @Slot(str)
@@ -224,9 +315,20 @@ class PetWindow(QWidget):
             p.setRenderHint(QPainter.SmoothPixmapTransform)
             
             rect = self.rect()
-            action = getattr(self._animation_engine, 'current_action', 'idle')
-            frame = getattr(self, '_frame', 0.0)
-            self._skin.draw(p, rect, {}, self._emotion, action, frame)
+            
+            if self._bongocat_enabled:
+                self._bongocat_renderer.set_emotion(self._emotion)
+                self._bongocat_renderer.set_frame(
+                    getattr(self, '_frame', 0.0)
+                )
+                self._bongocat_renderer.set_action(
+                    getattr(self._animation_engine, 'current_action', 'idle')
+                )
+                self._bongocat_renderer.draw(p, rect)
+            else:
+                action = getattr(self._animation_engine, 'current_action', 'idle')
+                frame = getattr(self, '_frame', 0.0)
+                self._skin.draw(p, rect, {}, self._emotion, action, frame)
             p.end()
         except Exception as e:
             print(f"[ERROR] paintEvent: {e}")
@@ -319,6 +421,12 @@ class PetWindow(QWidget):
             sm.addAction(a)
         
         menu.addSeparator()
+        
+        bongo_act = QAction("🐱 Bongocat模式", self)
+        bongo_act.setCheckable(True)
+        bongo_act.setChecked(self._bongocat_enabled)
+        bongo_act.triggered.connect(lambda checked: self._toggle_bongocat(checked))
+        menu.addAction(bongo_act)
         
         tools = menu.addMenu("⚙️ 设置")
         
@@ -420,9 +528,15 @@ class PetWindow(QWidget):
     @Slot(float)
     def _set_scale(self, v: float):
         self._config.set("window", "scale", v)
-        self._config.set("window", "width", int(120 * v))
-        self._config.set("window", "height", int(120 * v))
-        self.setFixedSize(int(120 * v), int(120 * v))
+        if self._bongocat_enabled:
+            base_w, base_h = 260, 220
+        else:
+            base_w, base_h = 120, 120
+        width = int(base_w * v)
+        height = int(base_h * v)
+        self._config.set("window", "width", width)
+        self._config.set("window", "height", height)
+        self.setFixedSize(width, height)
         self._bubble.show_message(f"缩放至 {int(v*100)}%", 2000)
     
     @Slot()
@@ -448,9 +562,13 @@ class PetWindow(QWidget):
             w = s["window"]
             if "scale" in w:
                 self._config.set("window", "scale", w["scale"])
-                self._config.set("window", "width", int(120 * w["scale"]))
-                self._config.set("window", "height", int(120 * w["scale"]))
-                self.setFixedSize(int(120 * w["scale"]), int(120 * w["scale"]))
+                if self._bongocat_enabled:
+                    base_w, base_h = 260, 220
+                else:
+                    base_w, base_h = 120, 120
+                self._config.set("window", "width", int(base_w * w["scale"]))
+                self._config.set("window", "height", int(base_h * w["scale"]))
+                self.setFixedSize(int(base_w * w["scale"]), int(base_h * w["scale"]))
             if "opacity" in w:
                 self._config.set("window", "opacity", w["opacity"])
                 self.setWindowOpacity(w["opacity"])
@@ -499,6 +617,8 @@ class PetWindow(QWidget):
         print("[DEBUG] Quitting...")
         self._config.set("window", "x", self.x())
         self._config.set("window", "y", self.y())
+        
+        self._stop_bongocat_listener()
         
         if self._workers_started:
             if hasattr(self, '_weather_worker') and self._weather_worker:

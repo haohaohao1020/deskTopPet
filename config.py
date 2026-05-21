@@ -28,6 +28,19 @@ class ConfigManager(QObject):
             "auto_sleep": True,
             "idle_timeout": 180
         },
+        "bongocat": {
+            "enabled": False,
+            "raise_duration": 0.06,
+            "press_duration": 0.04,
+            "release_duration": 0.06,
+            "min_press_gap": 0.02,
+            "rapid_threshold": 0.08,
+            "mouse_click_duration": 0.12,
+            "mouse_scroll_duration": 0.15,
+            "paw_lift_height": 18.0,
+            "paw_press_depth": 8.0,
+            "idle_timeout": 1.5
+        },
         "system": {
             "auto_start": False,
             "show_weather": True,
