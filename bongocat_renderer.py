@@ -72,16 +72,22 @@ class BongocatRenderer:
         painter.restore()
 
     def _compute_keyboard_layout(self, kb_x, kb_y, kb_w, kb_h):
-        rows = 4
-        key_gap = 2.0
+        rows = 5
+        key_gap = 1.5
         usable_w = kb_w - key_gap * 2
 
-        row_widths = [10, 10, 10, 10]
         key_w = usable_w / 10.0
-
         key_h = (kb_h - key_gap * (rows + 1)) / rows
 
         layout = {}
+
+        f_keys = ['F1', 'F2', 'F3', 'F4', 'F5', 'F6', 'F7', 'F8', 'F9', 'F10']
+        for col_idx in range(10):
+            label = f_keys[col_idx]
+            x = kb_x + key_gap + col_idx * (key_w + key_gap * 0.5)
+            y = kb_y + key_gap
+            layout[label] = QRectF(x, y, key_w * 0.9, key_h * 0.75)
+
         row_keys = [
             ['Q', 'W', 'E', 'R', 'T', 'Y', 'U', 'I', 'O', 'P'],
             ['A', 'S', 'D', 'F', 'G', 'H', 'J', 'K', 'L', 'ENT'],
@@ -89,19 +95,26 @@ class BongocatRenderer:
             ['CTL', 'SFT', 'ALT', 'SPC1', 'SPC2', 'SPC3', 'SPC4', 'ALT', 'SFT', 'CTL'],
         ]
 
-        for row_idx in range(rows):
+        for row_idx in range(4):
             for col_idx in range(10):
                 label = row_keys[row_idx][col_idx]
                 x = kb_x + key_gap + col_idx * (key_w + key_gap * 0.5)
-                y = kb_y + key_gap + row_idx * (key_h + key_gap * 0.5)
+                y = kb_y + key_gap + (row_idx + 1) * (key_h + key_gap * 0.5) + key_h * 0.1
                 layout[label] = QRectF(x, y, key_w, key_h)
 
         layout['SPC'] = QRectF(
             kb_x + key_gap * 2 + 3 * (key_w + key_gap * 0.5),
-            kb_y + key_gap + 3 * (key_h + key_gap * 0.5),
+            kb_y + key_gap + 4 * (key_h + key_gap * 0.5) + key_h * 0.1,
             4 * key_w + 3 * key_gap * 0.5,
             key_h
         )
+
+        arrow_y = kb_y + key_gap + 3 * (key_h + key_gap * 0.5) + key_h * 0.1
+        arrow_x_base = kb_x + key_gap + 8 * (key_w + key_gap * 0.5)
+        layout['↑'] = QRectF(arrow_x_base + key_w * 0.4, arrow_y - key_h * 0.6, key_w * 0.55, key_h * 0.5)
+        layout['←'] = QRectF(arrow_x_base, arrow_y, key_w * 0.55, key_h * 0.5)
+        layout['↓'] = QRectF(arrow_x_base + key_w * 0.4, arrow_y, key_w * 0.55, key_h * 0.5)
+        layout['→'] = QRectF(arrow_x_base + key_w * 0.85, arrow_y, key_w * 0.55, key_h * 0.5)
 
         special_positions = {
             'Key.q': 'Q', 'Key.w': 'W', 'Key.e': 'E', 'Key.r': 'R', 'Key.t': 'T',
@@ -115,6 +128,9 @@ class BongocatRenderer:
             'Key.shift_l': 'SFT', 'Key.shift_r': 'SFT',
             'Key.ctrl_l': 'CTL', 'Key.ctrl_r': 'CTL',
             'Key.alt_l': 'ALT', 'Key.alt_r': 'ALT',
+            'Key.f1': 'F1', 'Key.f2': 'F2', 'Key.f3': 'F3', 'Key.f4': 'F4', 'Key.f5': 'F5',
+            'Key.f6': 'F6', 'Key.f7': 'F7', 'Key.f8': 'F8', 'Key.f9': 'F9', 'Key.f10': 'F10',
+            'Key.up': '↑', 'Key.down': '↓', 'Key.left': '←', 'Key.right': '→',
         }
 
         self._key_map = special_positions
@@ -150,6 +166,10 @@ class BongocatRenderer:
             'SFT': ['Key.shift_l', 'Key.shift_r', 'Key.shift', 'SFT'],
             'CTL': ['Key.ctrl_l', 'Key.ctrl_r', 'Key.ctrl', 'CTL'],
             'ALT': ['Key.alt_l', 'Key.alt_r', 'Key.alt', 'ALT'],
+            '↑': ['Key.up'],
+            '↓': ['Key.down'],
+            '←': ['Key.left'],
+            '→': ['Key.right'],
         }
         if layout_label in key_map:
             return paw_key in key_map[layout_label]
@@ -199,56 +219,109 @@ class BongocatRenderer:
         painter.drawText(rect, Qt.AlignCenter, label)
 
     def _draw_mouse(self, painter, x, y, w, h):
-        body_color = QColor(55, 60, 70)
-        border_color = QColor(35, 38, 48)
+        body_color = QColor(65, 70, 80)
+        border_color = QColor(40, 43, 53)
 
-        gradient = QLinearGradient(x, y, x, y + h)
-        gradient.setColorAt(0, body_color.lighter(125))
-        gradient.setColorAt(1, body_color.darker(115))
+        main_body = QRectF(x, y + h * 0.08, w, h * 0.92)
+        gradient = QLinearGradient(x, y + h * 0.08, x, y + h)
+        gradient.setColorAt(0, body_color.lighter(130))
+        gradient.setColorAt(0.5, body_color)
+        gradient.setColorAt(1, body_color.darker(120))
 
         painter.setBrush(QBrush(gradient))
-        painter.setPen(QPen(border_color, 1))
-        painter.drawRoundedRect(QRectF(x, y, w, h), w * 0.4, h * 0.25)
+        painter.setPen(QPen(border_color, 1.5))
+        painter.drawRoundedRect(main_body, w * 0.45, h * 0.2)
 
-        button_color = QColor(100, 105, 115)
-        click_offset = 0.0
-        is_clicked = self._mouse_action in ('left_click', 'right_click')
+        top_curve = QPainterPath()
+        top_curve.moveTo(x + w * 0.15, y + h * 0.15)
+        top_curve.quadTo(x + w / 2, y, x + w * 0.85, y + h * 0.15)
+        painter.setBrush(QBrush(body_color.lighter(120)))
+        painter.setPen(QPen(border_color, 1))
+        painter.drawPath(top_curve)
+
+        button_color = QColor(110, 115, 125)
         is_left = self._mouse_action == 'left_click'
         is_right = self._mouse_action == 'right_click'
+        click_offset = 0.8
 
+        left_btn = QRectF(x + 2, y + h * 0.12, (w - 5) / 2, h * 0.42)
         if is_left and self._mouse_click_progress < 0.5:
-            click_offset = 1.0
-
-        left_btn = QRectF(x + 2, y + 3, (w - 5) / 2, h * 0.45)
-        painter.setBrush(QBrush(button_color.darker(115) if not is_left else QColor(255, 160, 60)))
-        painter.setPen(QPen(border_color, 1))
-        painter.drawRoundedRect(left_btn.translated(0, click_offset if is_left else 0), 3, 2)
-
-        if is_right and self._mouse_click_progress < 0.5:
-            click_offset = 1.0
-
-        right_btn = QRectF(x + w / 2 + 1, y + 3, (w - 5) / 2, h * 0.45)
-        painter.setBrush(QBrush(button_color.darker(115) if not is_right else QColor(255, 160, 60)))
-        painter.setPen(QPen(border_color, 1))
-        painter.drawRoundedRect(right_btn.translated(0, click_offset if is_right else 0), 3, 2)
-
-        wheel_rect = QRectF(x + w * 0.4, y + h * 0.5, w * 0.2, h * 0.18)
-        if self._mouse_action in ('scroll_up', 'scroll_down'):
-            painter.setBrush(QBrush(QColor(255, 180, 80)))
+            painter.setBrush(QBrush(QColor(255, 170, 70).lighter(115)))
         else:
-            painter.setBrush(QBrush(QColor(90, 95, 105)))
+            painter.setBrush(QBrush(button_color))
         painter.setPen(QPen(border_color, 1))
-        painter.drawRoundedRect(wheel_rect, 2, 2)
+        painter.drawRoundedRect(
+            left_btn.translated(0, click_offset if is_left and self._mouse_click_progress < 0.5 else 0),
+            4, 3
+        )
 
-        if self._mouse_action in ('scroll_up', 'scroll_down'):
+        right_btn = QRectF(x + w / 2 + 1, y + h * 0.12, (w - 5) / 2, h * 0.42)
+        if is_right and self._mouse_click_progress < 0.5:
+            painter.setBrush(QBrush(QColor(255, 170, 70).lighter(115)))
+        else:
+            painter.setBrush(QBrush(button_color))
+        painter.setPen(QPen(border_color, 1))
+        painter.drawRoundedRect(
+            right_btn.translated(0, click_offset if is_right and self._mouse_click_progress < 0.5 else 0),
+            4, 3
+        )
+
+        middle_line = QPainterPath()
+        middle_line.moveTo(x + w / 2, y + h * 0.12)
+        middle_line.lineTo(x + w / 2, y + h * 0.5)
+        painter.setPen(QPen(border_color.darker(120), 1))
+        painter.drawPath(middle_line)
+
+        wheel_x = x + w * 0.35
+        wheel_y = y + h * 0.54
+        wheel_w = w * 0.3
+        wheel_h = h * 0.22
+        wheel_rect = QRectF(wheel_x, wheel_y, wheel_w, wheel_h)
+
+        is_scroll = self._mouse_action in ('scroll_up', 'scroll_down')
+        if is_scroll:
+            wheel_grad = QLinearGradient(wheel_x, wheel_y, wheel_x, wheel_y + wheel_h)
+            wheel_grad.setColorAt(0, QColor(255, 190, 90))
+            wheel_grad.setColorAt(1, QColor(255, 150, 50))
+            painter.setBrush(QBrush(wheel_grad))
+        else:
+            wheel_grad = QLinearGradient(wheel_x, wheel_y, wheel_x, wheel_y + wheel_h)
+            wheel_grad.setColorAt(0, QColor(130, 135, 145))
+            wheel_grad.setColorAt(1, QColor(90, 95, 105))
+            painter.setBrush(QBrush(wheel_grad))
+        painter.setPen(QPen(border_color, 1))
+        painter.drawRoundedRect(wheel_rect, 3, 3)
+
+        if is_scroll:
             dy = 0.0
             if self._mouse_action == 'scroll_up':
-                dy = -3.0 * (1.0 - self._mouse_scroll_progress)
+                dy = -2.5 * (1.0 - self._mouse_scroll_progress)
             else:
-                dy = 3.0 * (1.0 - self._mouse_scroll_progress)
-            painter.setBrush(QBrush(QColor(255, 200, 100)))
+                dy = 2.5 * (1.0 - self._mouse_scroll_progress)
+            painter.setBrush(QBrush(QColor(255, 220, 130)))
             painter.setPen(Qt.NoPen)
             painter.drawRoundedRect(wheel_rect.translated(0, dy), 2, 2)
+
+        wheel_groove = QRectF(wheel_x + wheel_w * 0.3, wheel_y + 2, wheel_w * 0.4, wheel_h - 4)
+        painter.setPen(QPen(QColor(70, 75, 85), 1))
+        painter.setBrush(Qt.NoBrush)
+        painter.drawRoundedRect(wheel_groove, 1, 1)
+
+        highlight = QLinearGradient(x, y, x, y + h * 0.3)
+        highlight.setColorAt(0, QColor(255, 255, 255, 35))
+        highlight.setColorAt(1, QColor(255, 255, 255, 0))
+        painter.setBrush(QBrush(highlight))
+        painter.setPen(Qt.NoPen)
+        highlight_rect = QRectF(x + 3, y + 3, w - 6, h * 0.25)
+        painter.drawRoundedRect(highlight_rect, 8, 8)
+
+        grip_x = x + w * 0.15
+        grip_y = y + h * 0.82
+        grip_w = w * 0.7
+        grip_h = h * 0.08
+        painter.setBrush(QBrush(QColor(50, 55, 65)))
+        painter.setPen(QPen(QColor(35, 38, 48), 0.5))
+        painter.drawRoundedRect(QRectF(grip_x, grip_y, grip_w, grip_h), 2, 2)
 
     def _draw_cat(self, painter, rect, kb_x, kb_y, kb_w, kb_h, kb_layout):
         cx = rect.center().x()

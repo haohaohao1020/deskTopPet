@@ -1,22 +1,22 @@
 {
   "window": {
-    "x": 0,
-    "y": 744,
-    "width": 144,
-    "height": 144,
-    "scale": 1.2,
-    "opacity": 0.4,
+    "x": 1712,
+    "y": 790,
+    "width": 208,
+    "height": 176,
+    "scale": 0.8,
+    "opacity": 0.9,
     "always_on_top": true,
-    "click_through": true,
+    "click_through": false,
     "edge_snap": true,
     "snap_distance": 20
   },
   "pet": {
-    "current_skin": "bear",
-    "energy": 100,
-    "mood": 39.19999999999878,
-    "hunger": 83.27999999999892,
-    "emotion": "bored",
+    "current_skin": "fox",
+    "energy": 43,
+    "mood": 0,
+    "hunger": 100,
+    "emotion": "hungry",
     "auto_sleep": true,
     "idle_timeout": 180
   },
@@ -27,7 +27,7 @@
     "language": "zh_CN"
   },
   "bongocat": {
-    "enabled": false,
+    "enabled": true,
     "raise_duration": 0.06,
     "press_duration": 0.04,
     "release_duration": 0.06,

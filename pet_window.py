@@ -10,7 +10,7 @@ from PySide6.QtCore import (
 )
 from PySide6.QtGui import (
     QPainter, QColor, QPen, QBrush, QPainterPath, QCursor, 
-    QAction, QIcon, QPixmap, QGuiApplication
+    QAction, QIcon, QPixmap, QGuiApplication, QKeyEvent
 )
 from PySide6.QtWidgets import (
     QWidget, QMenu, QSystemTrayIcon, QMessageBox, QApplication,
@@ -54,6 +54,7 @@ class PetWindow(QWidget):
         self._bongocat_renderer = BongocatRenderer()
         self._action_state_machine = ActionStateMachine()
         self._listener_thread = None
+        self._ctrl_pressed = False
         
         self._setup_bongocat_connections()
         
@@ -147,6 +148,8 @@ class PetWindow(QWidget):
             listener.key_released.connect(self._action_state_machine.on_key_release)
             listener.mouse_clicked.connect(self._action_state_machine.on_mouse_click)
             listener.mouse_scrolled.connect(self._action_state_machine.on_mouse_scroll)
+            listener.ctrl_pressed.connect(self._bongocat_ctrl_press)
+            listener.ctrl_released.connect(self._bongocat_ctrl_release)
             self._listener_thread.start()
             print("[INFO] Bongocat keyboard/mouse listener started")
         except Exception as e:
@@ -267,6 +270,16 @@ class PetWindow(QWidget):
     @Slot(float)
     def _on_frame_updated(self, frame: float):
         self._frame = frame
+
+    def _bongocat_ctrl_press(self):
+        if self._bongocat_enabled and not self._ctrl_pressed:
+            self._ctrl_pressed = True
+            self._enable_click_through(False)
+
+    def _bongocat_ctrl_release(self):
+        if self._bongocat_enabled and self._ctrl_pressed:
+            self._ctrl_pressed = False
+            self._enable_click_through(True)
     
     @Slot(dict)
     def _on_weather_ready(self, data: dict):
@@ -606,11 +619,25 @@ class PetWindow(QWidget):
     def _on_tray_activated(self, reason):
         if reason == QSystemTrayIcon.DoubleClick:
             if self.isHidden():
-                self.show()
+                self._safe_show()
             else:
                 self.raise_()
         elif reason == QSystemTrayIcon.Context:
             self._show_menu(QCursor.pos())
+
+    def _safe_show(self):
+        self.show()
+        self.raise_()
+        self.activateWindow()
+        
+        flags = Qt.FramelessWindowHint
+        if self._config.get("window", "always_on_top"):
+            flags |= Qt.WindowStaysOnTopHint
+        self.setWindowFlags(flags)
+        self.show()
+        
+        if self._config.get("window", "click_through") or self._bongocat_enabled:
+            self._enable_click_through(True)
     
     @Slot()
     def _quit(self):

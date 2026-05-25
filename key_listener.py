@@ -83,6 +83,8 @@ class KeyListener(QObject):
     key_released = Signal(str, str, float)
     mouse_clicked = Signal(str, int, float)
     mouse_scrolled = Signal(int, float)
+    ctrl_pressed = Signal()
+    ctrl_released = Signal()
 
     MAX_HISTORY = 200
 
@@ -151,6 +153,9 @@ class KeyListener(QObject):
                 'interval': interval,
             })
             self.key_pressed.emit(normalized, paw, interval)
+            
+            if normalized in ['Key.ctrl_l', 'Key.ctrl_r', 'Key.ctrl']:
+                self.ctrl_pressed.emit()
         except Exception:
             pass
 
@@ -171,6 +176,9 @@ class KeyListener(QObject):
                 'duration': duration,
             })
             self.key_released.emit(normalized, paw, duration)
+            
+            if normalized in ['Key.ctrl_l', 'Key.ctrl_r', 'Key.ctrl']:
+                self.ctrl_released.emit()
         except Exception:
             pass
 
